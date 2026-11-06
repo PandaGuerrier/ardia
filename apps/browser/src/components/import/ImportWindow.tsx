@@ -8,7 +8,7 @@ import { ProfilesBody, ProfilesFooter } from "./steps/ProfilesStep";
 import { ProgressBody, ProgressFooter } from "./steps/ProgressStep";
 import { AccessBody, AccessFooter, SafariBody, SafariFooter } from "./steps/SafariStep";
 import { UnlockBody, UnlockFooter } from "./steps/UnlockStep";
-import { startImport, useImportFlow, type ImportFlow, type ImportStepName } from "../../state/import/flow";
+import { startImport, useImportFlow, type ImportFlow, type ImportSession, type ImportStepName } from "../../state/import/flow";
 import { useImportDevHandle } from "./importDevHandle";
 import { importColors, importLayout, importMotion } from "./tokens";
 
@@ -29,22 +29,32 @@ const STEPS: Record<ImportStepName, { Body: StepView; Footer: StepView | null }>
   done: { Body: DoneBody, Footer: DoneFooter },
 };
 
-export function ImportWindow() {
-  const theme = useTheme();
+export function ImportSteps({ session, maxWidth }: { session?: ImportSession; maxWidth?: number }) {
   const flow = useImportFlow();
-  useEffect(() => startImport(importMotion.doneDelay), []);
+  useEffect(() => startImport(importMotion.doneDelay, session), []);
   useImportDevHandle(flow);
   const { Body, Footer } = STEPS[flow.step.name];
   return (
-    <View style={{ flex: 1, backgroundColor: theme.dark ? importColors.windowFill.dark : importColors.windowFill.light }}>
-      <VisualEffect material="windowBackground" blendingMode="behindWindow" style={StyleSheet.absoluteFill} />
-      <WindowDragRegion style={{ position: "absolute", left: 0, right: 0, top: 0, height: importLayout.dragRegion }} />
+    <>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: importLayout.padX, paddingTop: importLayout.padTop, paddingBottom: space.xxl }}>
-        <Body flow={flow} />
+        <View style={{ width: "100%", maxWidth, alignSelf: "center" }}>
+          <Body flow={flow} />
+        </View>
       </ScrollView>
       <PageToolbar size="footer" divider>
         {Footer ? <Footer flow={flow} /> : null}
       </PageToolbar>
+    </>
+  );
+}
+
+export function ImportWindow() {
+  const theme = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.dark ? importColors.windowFill.dark : importColors.windowFill.light }}>
+      <VisualEffect material="windowBackground" blendingMode="behindWindow" style={StyleSheet.absoluteFill} />
+      <WindowDragRegion style={{ position: "absolute", left: 0, right: 0, top: 0, height: importLayout.dragRegion }} />
+      <ImportSteps />
     </View>
   );
 }

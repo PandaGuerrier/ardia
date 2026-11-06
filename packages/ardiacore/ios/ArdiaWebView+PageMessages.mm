@@ -96,7 +96,7 @@ NSMutableOrderedSet<NSString *> *ScriptFramesOf(ArdiaCoreTab *tab) {
 
 + (void)setDisplayMediaPicker:(BOOL)enabled {
   gDisplayMediaPicker = enabled;
-  ArdiaCoreEngine.pagesPickDisplayMedia = enabled;
+  if ([ArdiaCoreEngine respondsToSelector:@selector(setPagesPickDisplayMedia:)]) ArdiaCoreEngine.pagesPickDisplayMedia = enabled;
 }
 
 + (void)setSelectionPopoverEnabled:(BOOL)enabled {

@@ -78,7 +78,7 @@ export const SETTING_SPECS = {
   hideToolbarWhileScrolling: flag(true, SYNCED),
   newTabPosition: oneOf(["top", "bottom", "nextToCurrent"], "bottom", SYNCED),
   newTabButtonPosition: oneOf(["top", "bottom"], "bottom", SYNCED),
-  newTabOpens: oneOf(["page", "commandBar"], "page", SYNCED),
+  newTabOpens: oneOf(["page", "commandBar"], "commandBar", SYNCED),
   warnBeforeClosingLastTab: flag(true, SYNCED),
   undoReopensClosedTab: flag(false, SYNCED),
   warnBeforeMovingTabsToProfile: flag(true, SYNCED),

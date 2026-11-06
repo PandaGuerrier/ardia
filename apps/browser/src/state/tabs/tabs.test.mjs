@@ -15,7 +15,7 @@ const shown = (w) => short(S().tabs[model.activeTabId(S(), w)].url);
 
 const reset = (settings = {}) => {
   S().hydrate({});
-  S().updateSettings({ cmdClickCreatesTabGroup: false, newTabPosition: "bottom", ...settings });
+  S().updateSettings({ cmdClickCreatesTabGroup: false, newTabPosition: "bottom", newTabOpens: "page", ...settings });
 };
 const open = (w, url, opener, background = true) => S().newTab(w, { url: `${url}.com`, openerId: opener, background });
 const setup = (...urls) => {

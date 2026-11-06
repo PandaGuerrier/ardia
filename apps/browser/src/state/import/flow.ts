@@ -32,15 +32,18 @@ export type ImportFlow = {
   target: string;
   safariCookies: boolean;
   fullDiskAccess: boolean;
+  only: string | null;
   step: ImportStep;
 };
+
+export type ImportSession = { only?: string; onClose?: () => void };
 
 export const IMPORT_KINDS: ImportKind[] = ["bookmarks", "history", "passwords", "cookies", "autofill", "tabs", "spaces", "pinnedTabs", "favorites"];
 export const ENCRYPTED_KINDS: ImportKind[] = ["passwords", "cookies", "autofill"];
 export const APP_TAB_KINDS: ImportKind[] = ["tabs", "pinnedTabs"];
 export const NO_EXTENSIONS: FoundExtensions = { profileId: "", list: [], opened: false };
 
-const freshFlow = (target: string): ImportFlow => ({
+const freshFlow = (target: string, only: string | null = null): ImportFlow => ({
   browsers: [],
   source: null,
   sourceProfiles: [],
@@ -49,6 +52,7 @@ const freshFlow = (target: string): ImportFlow => ({
   target,
   safariCookies: true,
   fullDiskAccess: false,
+  only,
   step: { name: "loading" },
 });
 
@@ -59,6 +63,8 @@ export const patchImport = (patch: Partial<ImportFlow>) => useImportFlow.setStat
 
 let session = new AbortController();
 let doneDelay = 0;
+const closeImportWindow = () => void closeWindow(IMPORT_WINDOW_ID);
+let closer: () => void = closeImportWindow;
 
 export const importSignal = () => session.signal;
 
@@ -69,17 +75,21 @@ export const spacelessProfiles = (source: BrowserSource | null) => (source?.prof
 
 const waitsForAccess = ({ step, fullDiskAccess }: ImportFlow) => (step.name === "safari" && !fullDiskAccess) || step.name === "access";
 
-export function startImport(delayBeforeDone: number): () => void {
+export function startImport(delayBeforeDone: number, options: ImportSession = {}): () => void {
   session.abort();
   const own = (session = new AbortController());
+  const ownCloser = options.onClose ?? closeImportWindow;
   doneDelay = delayBeforeDone;
-  useImportFlow.setState(freshFlow(defaultTarget()), true);
+  closer = ownCloser;
+  const only = options.only ?? null;
+  useImportFlow.setState(freshFlow(defaultTarget(), only), true);
   const api = importModule();
   void api.listBrowsers().then(
-    (list) => {
+    (found) => {
       if (own.signal.aborted) return;
+      const list = only ? found.filter((b) => b.id === only) : found;
       patchImport({ browsers: list });
-      const preferred = takePreferredImportSource();
+      const preferred = only ?? takePreferredImportSource();
       const first = list.find((b) => b.id === preferred) ?? list.find((b) => !b.needsFullDiskAccess && !b.requiresExport) ?? list[0];
       if (first) chooseSource(first);
       else patchImport({ step: { name: "choose", error: null } });
@@ -93,6 +103,7 @@ export function startImport(delayBeforeDone: number): () => void {
   });
   return () => {
     own.abort();
+    if (closer === ownCloser) closer = closeImportWindow;
     appState.remove();
     api.forgetUnlockedKeys();
   };
@@ -127,7 +138,7 @@ export const toggleImportSpace = (id: string, on: boolean) => patchImport({ spac
 export const setImportTarget = (target: string) => patchImport({ target });
 export const setSafariCookies = (safariCookies: boolean) => patchImport({ safariCookies });
 export const backTo = (name: "choose" | "profiles") => patchImport({ step: name === "choose" ? { name, error: null } : { name } });
-export const closeImport = () => void closeWindow(IMPORT_WINDOW_ID);
+export const closeImport = () => closer();
 export function cancelImport() {
   session.abort();
   closeImport();
@@ -139,7 +150,8 @@ export async function recheckAccess() {
   const { signal } = session;
   const list = await api.listBrowsers().catch(orWarn(null));
   if (!list || signal.aborted) return;
-  patchImport({ browsers: list });
+  const { only } = importNow();
+  patchImport({ browsers: only ? list.filter((b) => b.id === only) : list });
   const updated = list.find((b) => b.id === importNow().source?.id);
   if (updated && !updated.needsFullDiskAccess) chooseSource(updated);
 }

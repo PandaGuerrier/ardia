@@ -9,6 +9,7 @@ export const INTERNAL_PAGES: Record<AppPageHost, { title: string }> = {
   history: { title: "History" },
   bookmarks: { title: "Bookmarks" },
   downloads: { title: "Downloads" },
+  "dia-import": { title: "Import from Dia" },
 };
 
 const internalUrl = (page: AppPageHost, query?: string) => `ardia://${page}${query ? `?q=${encodeURIComponent(query)}` : ""}`;

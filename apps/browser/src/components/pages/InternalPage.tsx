@@ -6,6 +6,7 @@ import { useTabBookmarkProfileId } from "../../state/bookmarks/hooks";
 import { updateLive, updateTab } from "../../state/tabs/actions";
 import { setPageProgress } from "../../state/tabs/pageProgress";
 import { BookmarksPage } from "./BookmarksPage";
+import { DiaImportPage } from "./DiaImportPage";
 import { DownloadsPage } from "./DownloadsPage";
 import { HistoryPage } from "./HistoryPage";
 import { INTERNAL_PAGES, internalPageOf, internalQuery, tabDestination } from "../../state/pages/urls";
@@ -31,6 +32,7 @@ export function InternalPage({ tabId }: { tabId: string }) {
       {page === "history" && <HistoryPage tabId={tabId} profileId={profileId} initialQuery={internalQuery(url)} />}
       {page === "bookmarks" && <BookmarksPage key={bookmarkProfile} tabId={tabId} profileId={bookmarkProfile} />}
       {page === "downloads" && <DownloadsPage tabId={tabId} />}
+      {page === "dia-import" && <DiaImportPage tabId={tabId} />}
     </View>
   );
 }

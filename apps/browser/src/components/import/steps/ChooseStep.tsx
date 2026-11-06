@@ -12,7 +12,7 @@ import { continueImport } from "../../../state/import/runImport";
 const HIDDEN_KINDS: ImportKind[] = ["spaces", "pinnedTabs"];
 
 export function ChooseBody({ flow }: { flow: ImportFlow }) {
-  const { browsers, source, kinds, step } = flow;
+  const { browsers, source, kinds, step, only } = flow;
   const bySpaces = importsBySpaces(source);
   const error = step.name === "choose" ? step.error : null;
   const appTabs = !!source?.asksAppForTabs;
@@ -21,9 +21,13 @@ export function ChooseBody({ flow }: { flow: ImportFlow }) {
     : KINDS.filter((k) => source.profiles.some((p) => p.available.includes(k.kind)) && (!HIDDEN_KINDS.includes(k.kind) || (appTabs && k.kind === "pinnedTabs")));
   return (
     <>
-      <Title title="Import from Another Browser" subtitle="Import once and stay in your flow. Your tabs, passwords, bookmarks and history come with you, and you stay signed in." />
+      {only ? (
+        <Title title="Import from Dia" subtitle="Bring your Dia profiles over: tabs, favorites, passwords, bookmarks, history and cookies so you stay signed in. Dia's extensions are offered on the Chrome Web Store once it's done." />
+      ) : (
+        <Title title="Import from Another Browser" subtitle="Import once and stay in your flow. Your tabs, passwords, bookmarks and history come with you, and you stay signed in." />
+      )}
       {browsers.length === 0 ? (
-        <Note text="No other browsers with data to import were found on this Mac." />
+        <Note text={only ? "Dia wasn't found on this Mac, or it has no data to import yet." : "No other browsers with data to import were found on this Mac."} />
       ) : (
         <View style={{ gap: space.s }}>
           {browsers.map((b) => (
@@ -60,7 +64,7 @@ export function ChooseFooter({ flow }: { flow: ImportFlow }) {
   const { source, kinds } = flow;
   return (
     <>
-      <Button title="Bookmarks HTML File…" onPress={() => void importBookmarksHtml()} />
+      {!flow.only && <Button title="Bookmarks HTML File…" onPress={() => void importBookmarksHtml()} />}
       <Spacer />
       <TargetPicker target={flow.target} onChange={setImportTarget} />
       <Button title="Cancel" onPress={closeImport} />
