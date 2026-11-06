@@ -307,6 +307,12 @@ export const generalRows = {
           description: "In the centre, ⌘L and a click on the address show it over the middle of the page, as in Arc.",
           keywords: ["cmd l", "command bar", "centred", "centered", "arc", "url bar", "location bar"],
         },
+        toolbarOnLocalPages: {
+          title: "Show the toolbar on local addresses",
+          description: "With the address bar in the sidebar, localhost, private IPs and .local sites still get the toolbar, with Developer Tools.",
+          keywords: ["localhost", "local ip", "127.0.0.1", "192.168", "developer", "dev tools", "devtools", "inspect", "url bar", "toolbar"],
+          shown: (s) => s.addressBar === "sidebar",
+        },
         compactToolbar: {
           title: "Compact toolbar",
           description: "A 28 pt toolbar instead of Dia's 41 pt, so the page gets more height and a 16:9 video can fill a maximized window. For the address bar in the toolbar and for tabs at the top.",

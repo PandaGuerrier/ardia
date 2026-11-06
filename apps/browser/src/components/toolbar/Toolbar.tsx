@@ -28,6 +28,8 @@ import { ZoomIndicator } from "../site/ZoomControls";
 import { useShortcutHint, withShortcut } from "../../state/commands/commandShortcuts";
 import { curve } from "../ui/motion";
 import { HistoryButton, ReloadButton } from "./NavButtons";
+import { isLocalAddress } from "@ardia/core";
+import { runCommand } from "../../state/commands/commands";
 import { ProgressBar, TabProgressBar } from "./ProgressBar";
 import { TOOLBAR_MOTION } from "./tokens";
 import { useToolbarRow } from "./useToolbarRow";
@@ -38,7 +40,9 @@ const toolbarTab = (t: Tab | undefined): ToolbarTab | undefined =>
 const isWebUrl = (url: string) => /^https?:/i.test(url);
 export const useToolbarTab = (tabId: string | undefined) => useTab(tabId, useShallow(toolbarTab));
 
-export const urlFieldRight = (inSplit: boolean, extensionsWidth: number, row: ToolbarRow) => (inSplit ? 12 + 2 * (row.button - 2) : 12) + extensionsWidth;
+export const urlFieldRight = (inSplit: boolean, extensionsWidth: number, row: ToolbarRow, devButtons = false) =>
+  (inSplit ? 12 + 2 * (row.button - 2) : 12) + extensionsWidth + (devButtons ? row.button : 0);
+export const devToolsShown = (url: string | null | undefined) => isLocalAddress(url);
 const LOCK = { left: 7, width: 18, gap: space.xs } as const;
 const SIDEBAR_TEXT_GAP = 6;
 export const urlTextLeft = (insecure: boolean) => (insecure ? LOCK.left + LOCK.width + LOCK.gap : 8);
@@ -62,6 +66,7 @@ export function Toolbar({
 }) {
   const theme = useTheme();
   const sidebarHint = useShortcutHint("toggleSidebar");
+  const devToolsHint = useShortcutHint("devTools");
   const sidebarIcon = useSidebarSide(windowId) === "right" ? "sidebar.right" : "sidebar.left";
   const tab = useToolbarTab(tabId);
   const isLoading = useTabLive(tabId, (l) => l.isLoading);
@@ -88,7 +93,9 @@ export function Toolbar({
     const nav = (center: number | null) => ({ style: place(center), hit });
     return { top, sidebarButton: place(geometry.sidebarButton), back: nav(geometry.back), forward: nav(geometry.forward), reload: nav(geometry.reload) };
   }, [geometry, row]);
-  const right = urlFieldRight(inSplit, extensionsWidth, row);
+  const devButtons = useTab(tabId, (t) => devToolsShown(t?.url));
+  const devRight = inSplit ? 8 + 2 * row.button : 8;
+  const right = urlFieldRight(inSplit, extensionsWidth, row, devButtons);
   const urlStyle = useMemo(() => ({ position: "absolute" as const, left: geometry.urlLeft, right, top: urlFieldOf(row).top }), [geometry.urlLeft, right, row]);
   if (!tab) return <View style={{ height: row.height }} />;
 
@@ -110,10 +117,20 @@ export function Toolbar({
         <HistoryButton place={at.back} tabId={tab.id} windowId={tab.windowId} direction={-1} disabled={!history.back} palette={palette} onFocus={focus} />
         <HistoryButton place={at.forward} tabId={tab.id} windowId={tab.windowId} direction={1} disabled={!history.forward} palette={palette} onFocus={focus} />
         <ReloadButton place={at.reload} tab={tab} loading={isLoading} palette={palette} onFocus={focus} />
-        <ToolbarExtensions tabId={tab.id} windowId={windowId} palette={palette} top={row.center - row.extensionButton / 2} right={inSplit ? 8 + 2 * row.button : 8} />
+        <ToolbarExtensions tabId={tab.id} windowId={windowId} palette={palette} top={row.center - row.extensionButton / 2} right={devRight + (devButtons ? row.button : 0)} />
         {tab.url ? (
           <ToolbarUrlField tab={tab} palette={palette} windowId={windowId} inSplit={inSplit} onFocus={focus} style={urlStyle} />
         ) : null}
+        {devButtons && (
+          <Button variant="icon" toolbar
+            style={{ position: "absolute", top: at.top, right: devRight }}
+            palette={palette}
+            icon="hammer"
+            look="row"
+            onPress={() => runCommand({ command: "devTools", arg: null, windowId }, { tabId: tab.id })}
+            tooltip={withShortcut("Developer Tools", devToolsHint)}
+          />
+        )}
         {inSplit && (
           <View style={{ position: "absolute", top: at.top, right: 8, flexDirection: "row", gap: -space.xxs }}>
             <Button variant="icon" toolbar palette={palette} icon="rectangle.split.2x1" look="row" onPress={() => showSplitMenu(tab.id)} tooltip="Split View" />

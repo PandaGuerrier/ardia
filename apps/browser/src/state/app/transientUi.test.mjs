@@ -17,7 +17,7 @@ const S = () => useBrowser.getState();
 
 function twoWindows(settings = {}) {
   S().hydrate({});
-  S().updateSettings(settings);
+  S().updateSettings({ addressBar: "toolbar", ...settings });
   const w = S().createWindow({ url: "a.com" });
   const other = S().createWindow({ url: "b.com" });
   return { w, other, tab: activeTabId(S(), w) };

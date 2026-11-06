@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { sidebarSideOf, tabLayoutOf } from "../browser/model";
+import { isLocalAddress } from "@ardia/core";
+import { activeTabId, sidebarSideOf, tabLayoutOf } from "../browser/model";
 import { switchOn } from "../../platform/killSwitches";
 import { ARC_LIGHTS_CENTER, lightsCenter, sidebarLightsCenter, toolbarLightsCenter, TOP_STRIP_LIGHTS_CENTER } from "./dockMotion";
 import type { LightsPlace } from "../../platform/windows";
@@ -24,6 +25,21 @@ export function addressBarInSidebar(s: BrowserState, windowId: string): boolean 
 
 export function commandBarCentred(s: BrowserState, windowId: string): boolean {
   return s.settings.commandBarPlacement === "centred" && !!s.windows[windowId] && s.windows[windowId]!.kind !== "small";
+}
+
+export function localPageToolbar(s: BrowserState, windowId: string): boolean {
+  if (!s.settings.toolbarOnLocalPages) return false;
+  const active = activeTabId(s, windowId);
+  return isLocalAddress(active ? s.tabs[active]?.url : null);
+}
+
+export function toolbarHidden(s: BrowserState, windowId: string): boolean {
+  return addressBarInSidebar(s, windowId) && !localPageToolbar(s, windowId);
+}
+
+export function useToolbarHidden(): boolean {
+  const windowId = useWindowId();
+  return useBrowser((s) => toolbarHidden(s, windowId));
 }
 
 export function useAddressBarInSidebar(): boolean {

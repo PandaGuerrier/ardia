@@ -114,6 +114,7 @@ function AddressBarPicker() {
   const addressBar = useSettings((s) => s.addressBar);
   const placement = useSettings((s) => s.commandBarPlacement);
   const compactToolbar = useSettings((s) => s.compactToolbar);
+  const toolbarOnLocalPages = useSettings((s) => s.toolbarOnLocalPages);
   const topTabs = useTabLayout() === "top";
   const choose = (value: Settings["addressBar"]) => updateSettings({ addressBar: value });
   return (
@@ -142,6 +143,9 @@ function AddressBarPicker() {
             onChange={(v) => updateSettings({ commandBarPlacement: v })}
             minWidth={160}
           />
+        </Row>
+        <Row anchor="appearance.toolbarOnLocalPages">
+          <Toggle value={toolbarOnLocalPages} onChange={(v) => updateSettings({ toolbarOnLocalPages: v })} />
         </Row>
         <Row anchor="appearance.compactToolbar">
           <Toggle value={compactToolbar} onChange={(v) => updateSettings({ compactToolbar: v })} />
