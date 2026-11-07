@@ -1,5 +1,6 @@
 #import "ArdiaChromeWindowInternal.h"
 #import "ArdiaWebViewInternal.h"
+#import "ArdiaAppleSignIn.h"
 
 using namespace ardia_window;
 
@@ -286,6 +287,10 @@ NSImage *_Nullable PermissionIcon(NSDictionary *request) {
 - (void)tabDidChangeURL:(ArdiaCoreTab *)tab {
   [self updateTitle];
   [self updateOrigin];
+}
+
+- (void)tabDidCommitDocument:(ArdiaCoreTab *)tab {
+  [ArdiaAppleSignIn tabCommitted:tab initiatorOrigin:_opener.committedOrigin popup:YES];
 }
 
 - (void)tabDidChangeSecurity:(ArdiaCoreTab *)tab {

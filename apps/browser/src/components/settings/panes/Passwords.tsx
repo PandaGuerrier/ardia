@@ -12,7 +12,7 @@ import { orWarn } from "../../../lib/fallback";
 import { confirm, copyText, systemInfo } from "../../../state/app/system";
 import { Box, Button, DialogActions, DialogTitle, SearchField, Sheet, space, Symbol, Text, TextField, Toggle } from "../../ui";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Linking, View } from "react-native";
 import { useTheme } from "../../ui/theme";
 import { currentEngineProfile } from "../../../state/browser/current";
 import { plural } from "../../../state/browser/model";
@@ -39,6 +39,7 @@ export function PasswordsPane({ profileId: initial }: { profileId?: string | nul
   const [never, setNever] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [importStatus, setImportStatus] = useState("");
+  const [appleImportStatus, setAppleImportStatus] = useState("");
   const [exportStatus, setExportStatus] = useState("");
   const profile = currentEngineProfile(profileId);
   const unlocked = usePasswordsUnlocked(profile);
@@ -52,14 +53,14 @@ export function PasswordsPane({ profileId: initial }: { profileId?: string | nul
     if (unlocked) load();
   }, [unlocked, profileId]);
 
-  const importCsv = async () => {
+  const importCsv = async (report: (status: string) => void) => {
     try {
       const result = await importPasswordsCsv(profile);
       if (result === "cancelled") return;
-      setImportStatus(`Imported ${plural(result.saved, "password")}.`);
+      report(`Imported ${plural(result.saved, "password")}.`);
       load();
     } catch (e) {
-      setImportStatus(`Couldn't import that file: ${(e as Error).message}`);
+      report(`Couldn't import that file: ${(e as Error).message}`);
     }
   };
 
@@ -86,7 +87,13 @@ export function PasswordsPane({ profileId: initial }: { profileId?: string | nul
           <Toggle value={autofill} onChange={(v) => void setPasswordAutofillFor(profile, v)} />
         </Row>
         <Row anchor="passwords.importPasswords" description={importStatus || undefined}>
-          <Button title="Import CSV…" onPress={() => void importCsv()} />
+          <Button title="Import CSV…" onPress={() => void importCsv(setImportStatus)} />
+        </Row>
+        <Row anchor="passwords.applePasswords" description={appleImportStatus || undefined}>
+          <Box row gap="s">
+            <Button title="Open Passwords" onPress={() => void Linking.openURL("file:///System/Applications/Passwords.app")} />
+            <Button title="Import File…" onPress={() => void importCsv(setAppleImportStatus)} />
+          </Box>
         </Row>
         <Row anchor="passwords.exportPasswords" description={exportStatus || undefined}>
           <Button title="Export CSV…" onPress={() => void exportCsv()} />

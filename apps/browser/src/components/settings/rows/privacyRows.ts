@@ -56,6 +56,11 @@ export const privacyRows = {
           keywords: ["password manager", "logins", "credentials", "keychain"],
         },
         importPasswords: { title: "Import passwords", description: "From a CSV exported by Chrome, Safari, Firefox, 1Password, Bitwarden…", keywords: ["csv", "logins"] },
+        applePasswords: {
+          title: "Apple Passwords",
+          description: "Bring over your iCloud Keychain passwords: in Passwords, choose File › Export All Passwords…, then import that file.",
+          keywords: ["icloud", "keychain", "apple", "passwords app", "safari", "csv"],
+        },
         exportPasswords: { advanced: true, title: "Export passwords", description: "To a CSV file. Anyone who can open the file can read your passwords.", keywords: ["csv", "backup", "logins"] },
         managerApps: { advanced: true, title: "Password manager apps", keywords: ["1password", "bitwarden", "keepassxc", "proton pass"] },
       },

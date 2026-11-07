@@ -1,4 +1,5 @@
 #import "ArdiaWebViewInternal.h"
+#import "ArdiaAppleSignIn.h"
 #import "ArdiaEarlyWindow.h"
 #import "ArdiaFieldTiming.h"
 #import "ArdiaNavigationDownloads.h"
@@ -16,6 +17,15 @@ bool IsRendererDebugURL(NSString *url) {
     @"inducebrowserdcheckforrealz", @"cfi-crash", @"heap-corruption-crash"
   ]];
   return [hosts containsObject:c.host.lowercaseString ?: @""];
+}
+
+NSString *PreviousEntryOrigin(ArdiaCoreTab *tab) {
+  NSString *previous = nil;
+  for (NSDictionary *entry in tab.navigationEntries) {
+    if ([entry[@"committed"] boolValue]) return previous ? [ArdiaCoreTab originForURL:previous] : nil;
+    previous = entry[@"url"];
+  }
+  return nil;
 }
 
 NSString *CommittedEntryURL(ArdiaCoreTab *tab) {
@@ -47,6 +57,10 @@ NSString *PNGDataURL(NSImage *image) {
 }
 
 @implementation ArdiaWebView (Navigation)
+
+- (NSString *)committedOrigin {
+  return _tab.committedOrigin;
+}
 
 - (void)emitNavigation {
   _sent.navigationQueued = NO;
@@ -166,6 +180,7 @@ NSString *PNGDataURL(NSImage *image) {
   _reports.themeSource = nil;
   _sent.favicon = nil;
   [self queueNavigation];
+  [ArdiaAppleSignIn tabCommitted:tab initiatorOrigin:PreviousEntryOrigin(tab) popup:NO];
 }
 
 - (void)tabDidChangeProgress:(ArdiaCoreTab *)tab {

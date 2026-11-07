@@ -155,6 +155,7 @@ struct ArdiaPageFocusState {
 @end
 
 @interface ArdiaWebView (TabInternal)
+- (NSString *)committedOrigin;
 - (void)adoptIntoWindow;
 - (void)attach:(ArdiaCoreTab *)tab;
 - (void)detach;
