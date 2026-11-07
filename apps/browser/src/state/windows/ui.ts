@@ -20,10 +20,11 @@ export type UiSlice = {
   openPanel(windowId: string, initialText?: string, newTab?: NewTabTarget): void;
   closePanel(windowId: string): void;
   setDownloadsOpen(windowId: string, open: boolean): void;
+  setThemeEditorFor(windowId: string, profileId: string | null): void;
   setFind(tabId: string, patch: Partial<FindState>): void;
 };
 
-export const DEFAULT_WINDOW_UI: WindowUi = { panel: { open: false, initialText: "" }, downloadsOpen: false };
+export const DEFAULT_WINDOW_UI: WindowUi = { panel: { open: false, initialText: "" }, downloadsOpen: false, themeEditorFor: null };
 export const CLOSED_FIND: FindState = { open: false, query: "", count: null, active: 0 };
 export function patchWindowUi(s: BrowserState, windowId: string, patch: Partial<WindowUi>): Partial<BrowserState> {
   if (!s.windows[windowId]) return {};
@@ -59,6 +60,10 @@ export const createUiSlice: StateCreator<BrowserState, [], [], UiSlice> = (set, 
 
   setDownloadsOpen(windowId, downloadsOpen) {
     set((s) => patchWindowUi(s, windowId, { downloadsOpen }));
+  },
+
+  setThemeEditorFor(windowId, themeEditorFor) {
+    if ((get().windowUi[windowId]?.themeEditorFor ?? null) !== themeEditorFor) set((s) => patchWindowUi(s, windowId, { themeEditorFor }));
   },
 
   setFind(tabId, patch) {

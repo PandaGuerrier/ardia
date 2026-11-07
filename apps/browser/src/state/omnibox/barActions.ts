@@ -90,6 +90,7 @@ const DEFS: ActionDef[] = [
   { command: "keyboardShortcuts", keywords: ["shortcuts", "hotkeys"] },
   { command: "mergeAllWindows", needs: "profiles" },
   { command: "newProfile", keywords: ["create profile"], needs: "profiles" },
+  { command: "editTheme", keywords: ["theme", "gradient", "space colour", "space color", "customize"], needs: "profiles" },
   { command: "setAppearance", arg: "dark", keywords: ["dark mode"] },
   { command: "setAppearance", arg: "light", keywords: ["light mode"] },
   { command: "setAppearance", arg: "auto", keywords: ["auto appearance", "system appearance"] },

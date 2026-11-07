@@ -24,13 +24,14 @@ const base = {
   sharesTopApps: null,
 };
 
-test("a profile's menu in the sidebar: Rename…, the icon picker and its colour, Profile Settings…, and Delete Profile… last", () => {
+test("a profile's menu in the sidebar: Rename…, the icon picker, its colour and Edit Theme…, Profile Settings…, and Delete Profile… last", () => {
   assert.deepEqual(render(profileMenuItems(base)), [
     "Rename… [pencil]",
     "Add Icon… [photo]",
     "Color [paintpalette] ›",
     "  Plum (swatch)",
     "  ✓ Blue (swatch)",
+    "Edit Theme… [paintbrush]",
     "---",
     "Profile Settings… [gearshape]",
     "---",
@@ -49,11 +50,17 @@ test("in Settings the same verbs, with the details and default choices in place 
 
 test("a profile that shares data has a Share Top Apps check in its menu; one with its own data doesn't", () => {
   const on = render(profileMenuItems({ ...base, sharesTopApps: true }));
-  assert.deepEqual(on.slice(5, 8), ["---", "✓ Share Top Apps [square.grid.2x2]", "---"]);
+  assert.deepEqual(on.slice(6, 9), ["---", "✓ Share Top Apps [square.grid.2x2]", "---"]);
   const off = render(profileMenuItems({ ...base, sharesTopApps: false }));
   assert.ok(off.includes("Share Top Apps [square.grid.2x2]"));
   assert.ok(!off.some((l) => l.startsWith("✓ Share Top Apps")), "unchecked when off");
   assert.ok(!render(profileMenuItems(base)).some((l) => l.includes("Share Top Apps")));
+});
+
+test("Edit Theme… is a sidebar verb: Settings has the editor inline, and a private window's menu leaves it out", () => {
+  assert.ok(!render(profileMenuItems({ ...base, place: "settings" })).some((l) => l.startsWith("Edit Theme…")));
+  assert.ok(!render(profileMenuItems({ ...base, editsTheme: false })).some((l) => l.startsWith("Edit Theme…")));
+  assert.ok(render(profileMenuItems({ ...base, editsTheme: true })).includes("Edit Theme… [paintbrush]"));
 });
 
 const pickerFor = (profileId) => ({ profileId, windowId: "w", place: "settings", anchor: null });

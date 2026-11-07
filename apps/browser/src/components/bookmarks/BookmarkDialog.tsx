@@ -9,7 +9,7 @@ import { useBookmarks } from "../../state/bookmarks/hooks";
 import { currentBookmarkRoots, currentBookmarks } from "../../state/browser/current";
 import { FolderPicker } from "./DialogParts";
 import { bookmarkDialog } from "./tokens";
-import { useAddressBarInSidebar } from "../../state/windows/layout";
+import { useAddressBarInSidebar, useTabLayout } from "../../state/windows/layout";
 import { useToolbarRow } from "../toolbar/useToolbarRow";
 import { SIDEBAR_HEADER_WITH_FIELD } from "../sidebar/geometry";
 
@@ -25,7 +25,10 @@ function DialogPanel({ state }: { state: BookmarkDialogState }) {
   const sidebarRight = useSidebarSide(state.windowId) === "right";
   const sidebarOpen = useSidebarOpen();
   const sidebarWidth = useSidebarWidth(state.windowId);
-  const cardRight = sidebarRight && sidebarOpen ? sidebarWidth + layout.sidebarCardGap : layout.cardInset;
+  const topTabs = useTabLayout() === "top";
+  const edgeToEdge = !sidebarOpen && !topTabs;
+  const cardInset = edgeToEdge ? 0 : layout.cardInset;
+  const cardRight = sidebarRight && sidebarOpen ? sidebarWidth + layout.sidebarCardGap : cardInset;
   const toolbarHeight = useToolbarRow().height;
   const bookmark = useBookmarks((b) => (state.kind === "page" ? b.nodes[state.bookmarkId] : undefined));
   const profileId = state.kind === "page" ? profileOfBookmark(state.bookmarkId) : state.profileId;
@@ -75,7 +78,7 @@ function DialogPanel({ state }: { state: BookmarkDialogState }) {
           ? sidebarRight
             ? { top: SIDEBAR_HEADER_WITH_FIELD + bookmarkDialog.belowField, right: layout.sidebarInset }
             : { top: SIDEBAR_HEADER_WITH_FIELD + bookmarkDialog.belowField, left: layout.sidebarInset }
-          : { top: layout.cardInset + toolbarHeight - bookmarkDialog.belowToolbar, right: cardRight + bookmarkDialog.rightInset }
+          : { top: cardInset + toolbarHeight - bookmarkDialog.belowToolbar, right: cardRight + bookmarkDialog.rightInset }
       }
     >
       <Text weight="semibold">{heading}</Text>

@@ -5,7 +5,9 @@ import { test } from "node:test";
 globalThis.__DEV__ = false;
 
 const { parseArcTheme } = await import("./arcTheme.ts");
-const { themeArea, themeLayerAlpha, themeUnderlayAlpha, themeBackdrop, sanitizeTheme, padColor, padPosition, resolveTheme } = await import("../../lib/profileLook.ts");
+const { themeArea, themeLayerAlpha, themeUnderlayAlpha, themeBackdrop, sanitizeTheme, padColor, padPosition, resolveTheme, grainStrength } = await import("../../lib/profileLook.ts");
+
+const sameStrength = (grain, arc) => assert.ok(Math.abs(grainStrength(grain) - arc) < 1e-9, `${grain} renders as Arc's ${arc}`);
 
 const fixtures = new URL("../../../../../packages/import/fixtures/", import.meta.url);
 const fixture = (name) => JSON.parse(readFileSync(new URL(`arc-themes/${name}.json`, fixtures), "utf8"));
@@ -31,7 +33,7 @@ test("green to pink space: two base colours kept exactly, light mode, grain", ()
   assert.equal(theme.stops.length, 2);
   assert.deepEqual(theme.stops.map((s) => s.color), g.baseColors.map(rgb));
   assert.equal(theme.intensity, g.modifiers.intensityFactor);
-  assert.equal(theme.grain, g.modifiers.noiseFactor);
+  sameStrength(theme.grain, g.modifiers.noiseFactor);
   assert.equal(theme.texture, "grain");
   assert.equal(theme.mode, "light");
   assert.equal(theme.translucency, 1);
@@ -47,7 +49,7 @@ test("blue to teal space: the third colour comes from Arc's overlay, mode follow
   assert.deepEqual(theme.stops.map((s) => s.color), [...g.baseColors, g.overlayColors[1]].map(rgb));
   assert.equal(theme.mode, "auto");
   assert.equal(theme.intensity, 0.75);
-  assert.equal(theme.grain, 0.3);
+  sameStrength(theme.grain, 0.3);
   near(onLightDesktop(theme, 600, 0), hex("#8C8FD0"), 0.08, "top");
   near(onLightDesktop(theme, 600, 800), hex("#6DB3C8"), 0.08, "bottom");
 });
@@ -58,8 +60,8 @@ test("single colour, extended range and a texture", () => {
   assert.deepEqual(theme.stops[0].color, { r: 1.0721, g: 0.4103, b: -0.0207, a: 1 });
   assert.equal(theme.texture, "sand");
   assert.equal(theme.mode, "dark");
-  assert.equal(theme.grain, 1);
-  assert.equal(themeBackdrop(theme, true).themeGrain, 0.15);
+  sameStrength(theme.grain, 1);
+  assert.ok(Math.abs(themeBackdrop(theme, true).themeGrain - 0.15) < 1e-9);
 });
 
 test("an opaque basic colour per appearance keeps both looks and picks one when rendering", () => {

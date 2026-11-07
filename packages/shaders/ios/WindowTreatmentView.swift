@@ -17,7 +17,9 @@ final class WindowTreatmentView: NSView {
     didSet {
       guard custom != oldValue else { return }
       if custom?.appearance != oldValue?.appearance { appearance = custom?.forcedAppearance }
-      if custom?.colors != oldValue?.colors { themeLayer.setColors(custom?.colors ?? []) }
+      if custom?.colors != oldValue?.colors || custom?.shape != oldValue?.shape {
+        themeLayer.setColors(custom?.colors ?? [], shape: custom?.shape ?? ArcGradientLayer.linear)
+      }
       themeLayer.angle = custom?.angle ?? ArcGradientLayer.defaultAngle
       updateState()
       updateAppearance()
@@ -102,7 +104,8 @@ final class WindowTreatmentView: NSView {
     guard let custom else { return grain.opacity = 0 }
     let active = activity.isActive || showsKeyLook
     grain.texture = custom.texture
-    grain.opacity = Float(min(max(custom.grain, 0), 1) * (active ? 1 : Self.inactiveGrain))
+    grain.scale = custom.grainScale
+    grain.setStrength(min(max(custom.grain, 0), GrainLayer.maxStrength) * (active ? 1 : Self.inactiveGrain))
   }
 
   private func updateTint() {

@@ -1,10 +1,10 @@
 import { holdThemedWindowsKeyLook, choosePresetColor, setProfileTheme } from "../../state/profiles/themeActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Pressable, View } from "react-native";
+import { Animated, View } from "react-native";
 import {
-  DEFAULT_THEME_ANGLE,
-  flatColors,
   lookAngle,
+  lookGrainSize,
+  lookShape,
   MAX_THEME_STOPS,
   requestedDarkFor,
   resolveTheme,
@@ -17,15 +17,16 @@ import {
   spaceLookSource,
   type ShownLook,
 } from "../../lib/profileLook";
-import { THEME_TEXTURES } from "@ardia/core";
+import { THEME_SHAPES, THEME_TEXTURES, type ThemeShape } from "@ardia/core";
 import { PROFILE_COLORS } from "../ui/theme";
 import { useAppDark, useProfile, useSettings, useWindow } from "../../state/browser/hooks";
 import type { ProfileColor, ProfileTheme, ThemeMode, ThemeTexture } from "../../state/browser/types";
-import { Box, Button, curve, duration, Group, PopUp, Segmented, space, Swatch, swatch, Text, ThemeSwatch } from "../ui";
+import { Box, Button, curve, duration, Group, PopUp, Segmented, space, swatch, Text } from "../ui";
 import { importArcTheme } from "../../state/profiles/arcThemes";
 import { Row, SectionHeader } from "./Form";
 import { ColorPad, DirectionDial, LABEL, Labelled, LightnessBar, Preview, Slider } from "./ThemeControls";
 import { settingsInk } from "./tokens";
+import { ColorButton, LookSwatch, ThemePresets } from "./ThemePresets";
 
 export { arcThemeChoices, importArcTheme } from "../../state/profiles/arcThemes";
 
@@ -36,6 +37,8 @@ const MODES: { value: ThemeMode; symbol: string; title: string }[] = [
 ];
 
 const TEXTURE_NAMES: Record<ThemeTexture, string> = { grain: "Grain", sand: "Sand", denim: "Denim", tweed: "Tweed" };
+const SHAPE_NAMES: Record<ThemeShape, string> = { linear: "Linear", radial: "Radial", mesh: "Mesh" };
+const SHAPE_OPTIONS = THEME_SHAPES.map((value) => ({ value, title: SHAPE_NAMES[value] }));
 
 function useLiveTheme(theme: ProfileTheme | null | undefined, apply: (theme: ProfileTheme) => void) {
   const [draft, setDraft] = useState<ProfileTheme | null>(null);
@@ -103,9 +106,12 @@ export function ThemeSection({ profileId }: { profileId: string }) {
         >
           <ThemeSwatches color={custom ? null : profile.color} onPreset={(c) => choosePresetColor(profileId, c)} custom={custom} onCustom={startCustom} />
         </Row>
+        <Row title="Presets" description="Ready-made gradients to start from.">
+          <ThemePresets theme={custom} onApply={(theme) => change(theme, true)} size={swatch.size} />
+        </Row>
         {custom && shown ? (
           <Box pad="l">
-            <ThemeEditor theme={custom} full={{ shown, followsApp }} onChange={change} />
+            <ThemeEditor theme={custom} look={{ shown, followsApp }} preview onChange={change} />
           </Box>
         ) : null}
       </Group>
@@ -181,22 +187,6 @@ export function ThemeSwatches({
   );
 }
 
-function ColorButton({ name, ring, size, selected, onPress, children }: { name: string; ring: string; size: number; selected: boolean; onPress: () => void; children?: ReactNode }) {
-  return (
-    <View tooltip={name}>
-      <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={name}>
-        {({ pressed }) => (
-          <View style={{ transform: [{ scale: pressed ? PRESSED_SCALE : 1 }] }}>
-            <Swatch animated size={size} selected={selected} ring={ring} fill={children ? undefined : ring}>
-              {children}
-            </Swatch>
-          </View>
-        )}
-      </Pressable>
-    </View>
-  );
-}
-
 function FadeIn({ children }: { children: ReactNode }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -219,7 +209,7 @@ const RAINBOW: ProfileTheme = {
 };
 
 export function CustomSwatch({ theme }: { theme: ProfileTheme | null }) {
-  return <ThemeSwatch colors={flatColors(theme ?? RAINBOW)} angle={theme ? lookAngle(theme) : DEFAULT_THEME_ANGLE} style={{ flex: 1 }} />;
+  return <LookSwatch theme={theme ?? RAINBOW} />;
 }
 
 function ThemeStops({ theme, onChange }: { theme: ProfileTheme; onChange: (next: ProfileTheme, settle?: boolean) => void }) {
@@ -262,19 +252,25 @@ function ThemeStops({ theme, onChange }: { theme: ProfileTheme; onChange: (next:
 
 export function ThemeEditor({
   theme,
-  full,
+  look,
+  preview = false,
   onChange,
 }: {
   theme: ProfileTheme;
-  full?: { shown: ShownLook; followsApp: boolean };
+  look?: { shown: ShownLook; followsApp: boolean };
+  preview?: boolean;
   onChange: (next: ProfileTheme, settle?: boolean) => void;
 }) {
-  const stacked = !full;
+  const stacked = !preview;
+  const shape = lookShape(theme);
   return (
     <Box row gap="xl">
       <ThemeStops theme={theme} onChange={onChange} />
-      <Box gap={full ? "l" : "xl"} style={FILL}>
-        {full ? <Preview shown={full.shown} /> : null}
+      <Box gap={preview ? "l" : "xl"} style={FILL}>
+        {preview && look ? <Preview shown={look.shown} /> : null}
+        <EditorRow stacked={stacked} label="Shape">
+          <Segmented options={SHAPE_OPTIONS} value={shape} onChange={(next) => onChange({ ...theme, shape: next }, true)} />
+        </EditorRow>
         <Slider stacked={stacked} label="Intensity" value={theme.intensity} onChange={(v, settle) => onChange({ ...theme, intensity: v }, settle)} />
         <Slider stacked={stacked} label="Pass-through blur" value={theme.translucency} onChange={(v, settle) => onChange({ ...theme, translucency: v }, settle)} />
         <Slider stacked={stacked} label="Noise" value={theme.grain} onChange={(v, settle) => onChange({ ...theme, grain: v }, settle)}>
@@ -285,21 +281,24 @@ export function ThemeEditor({
             onChange={(texture) => onChange({ ...theme, texture, grain: theme.grain || 0.5 }, true)}
           />
         </Slider>
-        <EditorRow stacked={stacked} label="Direction">
-          <DirectionDial angle={lookAngle(theme)} onChange={(angle, settle) => onChange(withAngle(theme, angle), settle)} />
-        </EditorRow>
-        {full ? (
-          <EditorRow label="Appearance">
-            {full.followsApp ? (
+        <Slider stacked={stacked} label="Grain size" value={lookGrainSize(theme)} onChange={(v, settle) => onChange({ ...theme, grainSize: v }, settle)} />
+        {shape === "linear" ? (
+          <EditorRow stacked={stacked} label="Direction">
+            <DirectionDial angle={lookAngle(theme)} onChange={(angle, settle) => onChange(withAngle(theme, angle), settle)} />
+          </EditorRow>
+        ) : null}
+        {look ? (
+          <EditorRow stacked={stacked} label="Appearance">
+            {look.followsApp ? (
               <Text size="caption" tone="textSecondary" lines={2} style={FILL}>
                 Follows Settings › Appearance
               </Text>
             ) : (
               <Segmented options={MODE_OPTIONS} value={theme.mode} onChange={(mode) => onChange({ ...theme, mode }, true)} />
             )}
-            {full.shown.dark !== full.shown.requestedDark ? (
-              <Text size="caption" tone="textSecondary" lines={2} style={KEPT_NOTE}>
-                Kept {full.shown.dark ? "dark" : "light"} so text stays readable
+            {look.shown.dark !== look.shown.requestedDark ? (
+              <Text size="caption" tone="textSecondary" lines={2} style={stacked ? undefined : KEPT_NOTE}>
+                Kept {look.shown.dark ? "dark" : "light"} so text stays readable
               </Text>
             ) : null}
           </EditorRow>
@@ -310,7 +309,12 @@ export function ThemeEditor({
 }
 
 function EditorRow({ label, stacked, children }: { label: string; stacked?: boolean; children: ReactNode }) {
-  if (stacked) return <Labelled label={label}>{children}</Labelled>;
+  if (stacked)
+    return (
+      <Labelled label={label}>
+        <View style={START}>{children}</View>
+      </Labelled>
+    );
   return (
     <View style={LABELLED_ROW}>
       <Text size="small" style={EDITOR_LABEL}>
@@ -322,9 +326,9 @@ function EditorRow({ label, stacked, children }: { label: string; stacked?: bool
 }
 
 const FILL = { flex: 1 } as const;
+const START = { alignItems: "flex-start" } as const;
 const LABELLED_ROW = { flexDirection: "row", alignItems: "center" } as const;
 const EDITOR_LABEL = { width: LABEL + space.ml } as const;
 const KEPT_NOTE = { flex: 1, marginLeft: space.m } as const;
-const PRESSED_SCALE = 0.94;
 const FADE_RISE = 4;
 const MODE_OPTIONS = MODES.map((m) => ({ value: m.value, title: m.title, image: m.symbol }));

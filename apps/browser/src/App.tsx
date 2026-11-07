@@ -13,6 +13,7 @@ import { UtilityWindow } from "./components/settings/UtilityWindow";
 import { isUtilityWindowId } from "./state/settings/settingsWindows";
 import { OnboardingOverlay } from "./components/onboarding";
 import { CreateProfileHost } from "./components/profiles/CreateProfile";
+import { ThemePopover } from "./components/profiles/ThemePopover";
 import { useFullscreenTab } from "./state/tabs/pageState";
 import { ProfileTint } from "./components/window/ProfileSwipe";
 import { TOP_STRIP_HEIGHT, TopStripPeek, TopTabStrip } from "./components/tabstrip/TopTabStrip";
@@ -92,6 +93,7 @@ function BrowserWindow() {
       <BookmarkDialog />
       <EditBookmarkDialog />
       <CreateProfileHost />
+      <ThemePopover />
       <SidebarOverlays windowWidth={width} />
       <OnboardingOverlay />
     </View>

@@ -70,6 +70,7 @@ export const AUTOMATION: Readonly<Record<BrowserCommand, AutomationDecision>> = 
   nextProfile: "run",
   previousProfile: "run",
   newProfile: "run",
+  editTheme: "run",
   openSettings: "run",
   importBrowserData: "run",
   showHistory: "run",

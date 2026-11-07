@@ -105,6 +105,7 @@ export const COMMANDS = {
   nextProfile: { title: "Next Profile", ...inWindow },
   previousProfile: { title: "Previous Profile", ...inWindow },
   newProfile: { title: "New Profile…", symbol: "person.crop.circle.badge.plus" },
+  editTheme: { title: "Edit Theme…", barTitle: "Edit Theme", symbol: "paintbrush", ...windowOffInLittleArdia },
   openSettings: { title: "Settings…", symbol: "gearshape", keys: ["⌘,"] },
   importBrowserData: { title: "Import from Another Browser…", barTitle: "Import Browser Data", symbol: "square.and.arrow.down" },
   showHistory: { title: "Show History…", barTitle: "History", symbol: "clock", keys: ["⌘Y"] },

@@ -2,18 +2,18 @@ import type { View } from "react-native";
 import { prompt } from "../../platform/dialogs";
 import { chooseFromMenu, type ChoiceItem } from "../app/menuChoice";
 import { menuSections } from "../app/menuSections";
-import { deleteProfile } from "../browser/actions";
-import { currentProfile, currentProfileOrder, currentProfiles, currentSettings } from "../browser/current";
+import { deleteProfile, switchProfile } from "../browser/actions";
+import { currentProfile, currentProfileOrder, currentProfiles, currentSettings, currentWindow } from "../browser/current";
 import type { ProfileColor } from "../browser/types";
 import { goToSettingsPane, openSettings } from "../settings/settingsWindows";
 import { commitProfileName, setDefaultProfile, setShareTopApps } from "./actions";
 import { sharingProfiles } from "./profiles";
 import { openProfileIconPicker } from "./iconPicker";
-import { choosePresetColor } from "./themeActions";
+import { choosePresetColor, openThemeEditor } from "./themeActions";
 
 export type ProfileMenuPlace = "sidebar" | "settings";
 export type ProfileColorChoice = { id: ProfileColor; title: string; swatch: string };
-type ProfileMenuItem = ChoiceItem<{ color: ProfileColor }, "rename" | "icon" | "color" | "topApps" | "settings" | "details" | "default" | "delete">;
+type ProfileMenuItem = ChoiceItem<{ color: ProfileColor }, "rename" | "icon" | "color" | "theme" | "topApps" | "settings" | "details" | "default" | "delete">;
 
 export type ProfileMenuState = {
   place: ProfileMenuPlace;
@@ -23,14 +23,16 @@ export type ProfileMenuState = {
   isDefault: boolean;
   only: boolean;
   sharesTopApps: boolean | null;
+  editsTheme?: boolean;
 };
 
-export function profileMenuItems({ place, hasIcon, colors, color, isDefault, only, sharesTopApps }: ProfileMenuState): ProfileMenuItem[] {
+export function profileMenuItems({ place, hasIcon, colors, color, isDefault, only, sharesTopApps, editsTheme = place === "sidebar" }: ProfileMenuState): ProfileMenuItem[] {
   return menuSections<ProfileMenuItem>(
     [
       { id: "rename" as const, title: "Rename…", symbol: "pencil" },
       { id: "icon" as const, title: hasIcon ? "Change Icon…" : "Add Icon…", symbol: "photo" },
       { id: "color" as const, title: "Color", symbol: "paintpalette", children: colors.map((c) => ({ value: { color: c.id }, title: c.title, swatch: c.swatch, checked: c.id === color })) },
+      editsTheme && { id: "theme" as const, title: "Edit Theme…", symbol: "paintbrush" },
     ],
     [sharesTopApps !== null && { id: "topApps" as const, title: "Share Top Apps", symbol: "square.grid.2x2", checked: sharesTopApps }],
     place === "sidebar"
@@ -64,12 +66,17 @@ export async function showProfileMenu(
       color: profile.theme ? null : profile.color,
       isDefault: currentSettings().defaultProfileId === profileId,
       only: currentProfileOrder().length <= 1,
+      editsTheme: place === "sidebar" && currentWindow(windowId)?.kind === "main",
       sharesTopApps: sharingProfiles({ profiles: currentProfiles(), profileOrder: currentProfileOrder() }, profileId).length ? !!profile.shareTopApps : null,
     }),
   );
   if (!choice) return;
   if (typeof choice === "object") return choosePresetColor(profileId, choice.color);
   if (choice === "icon") return void openProfileIconPicker(profileId, windowId, place, anchor);
+  if (choice === "theme") {
+    if (currentWindow(windowId)?.profileId !== profileId) switchProfile(windowId, profileId, true);
+    return openThemeEditor(windowId, profileId);
+  }
   if (choice === "rename") return void renameProfile(profileId, windowId);
   if (choice === "topApps") return setShareTopApps(profileId, !currentProfile(profileId)?.shareTopApps);
   if (choice === "settings") return openSettings("profiles", profileId);

@@ -1,10 +1,13 @@
-import { THEME_TEXTURES, type ThemeBackdropProps, type ThemeMode, type ThemeTexture } from "@ardia/core";
-import { hslToRgb, parseColor, rgbToHsl, toHex } from "./color";
+import { THEME_SHAPES, THEME_TEXTURES, type ThemeBackdropProps, type ThemeMode, type ThemeShape, type ThemeTexture } from "@ardia/core";
+import { parseColor, rgbToHsl, toHex } from "./color";
+import { clamp01, decode, mixOklab, padColor, padPosition, type ThemeColor } from "./themeColor";
+import { acrossStops, grainStrength, meshArea, radialArea } from "./themeShapes";
+
+export { fromOklab, mixOklab, oklab, PAD_LIGHTNESS, padColor, padPosition, type ThemeColor } from "./themeColor";
+export { grainForStrength, grainStrength, MESH_REACH } from "./themeShapes";
 import { numberOr } from "./decode";
 
 export type ProfileColor = "plum" | "blue" | "purple" | "pink" | "red" | "orange" | "yellow" | "green" | "neutral";
-
-export type ThemeColor = { r: number; g: number; b: number; a: number };
 
 export type ThemeStop = { color: ThemeColor; x: number; y: number };
 
@@ -15,6 +18,8 @@ export type ThemeLook = {
   texture: ThemeTexture;
   translucency: number;
   angle?: number;
+  shape?: ThemeShape;
+  grainSize?: number;
 };
 
 export type ProfileTheme = ThemeLook & {
@@ -24,12 +29,14 @@ export type ProfileTheme = ThemeLook & {
 
 export type ProfileLookFields = { color: ProfileColor; theme?: ProfileTheme | null };
 
-export const MAX_THEME_STOPS = 3;
-export const PAD_LIGHTNESS = 0.6;
+export const MAX_THEME_STOPS = 5;
+export const LEGACY_THEME_STOPS = 3;
 
 const TEXTURE_STRENGTH: Record<ThemeTexture, number> = { grain: 0.8, sand: 0.15, denim: 0.6, tweed: 0.4 };
 const BASE_REACH = 0.75;
 export const DEFAULT_THEME_ANGLE = 135;
+export const DEFAULT_THEME_SHAPE: ThemeShape = "linear";
+export const DEFAULT_GRAIN_SIZE = 0.5;
 
 export const PRESET_BACKDROP: ThemeBackdropProps = {
   themeColors: [],
@@ -39,52 +46,10 @@ export const PRESET_BACKDROP: ThemeBackdropProps = {
   themeTexture: "grain",
   themeAppearance: "auto",
   themeAngle: DEFAULT_THEME_ANGLE,
+  themeShape: DEFAULT_THEME_SHAPE,
+  themeGrainScale: 1,
 };
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-
-export function padColor(x: number, y: number, lightness = PAD_LIGHTNESS): ThemeColor {
-  const dx = clamp01(x) - 0.5, dy = clamp01(y) - 0.5;
-  let hue = Math.atan2(dy, dx) / (2 * Math.PI);
-  if (hue < 0) hue += 1;
-  const sat = Math.min(1, Math.hypot(dx, dy) / 0.5);
-  const [r, g, b] = hslToRgb(hue, sat, clamp01(lightness));
-  return { r, g, b, a: 1 };
-}
-
-export function padPosition(color: ThemeColor): { x: number; y: number } {
-  const [h, s] = rgbToHsl(clamp01(color.r), clamp01(color.g), clamp01(color.b));
-  const angle = h * 2 * Math.PI;
-  return { x: 0.5 + 0.5 * s * Math.cos(angle), y: 0.5 + 0.5 * s * Math.sin(angle) };
-}
-
-type Lab = [number, number, number];
-
-const decode = (v: number) => Math.sign(v) * (Math.abs(v) <= 0.04045 ? Math.abs(v) / 12.92 : ((Math.abs(v) + 0.055) / 1.055) ** 2.4);
-const encode = (v: number) => Math.sign(v) * (Math.abs(v) <= 0.0031308 ? Math.abs(v) * 12.92 : 1.055 * Math.abs(v) ** (1 / 2.4) - 0.055);
-
-export function oklab(c: ThemeColor): Lab {
-  const [r, g, b] = [c.r, c.g, c.b].map(decode) as Lab;
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-  return [
-    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-  ];
-}
-
-export function fromOklab([L, A, B]: Lab): [number, number, number] {
-  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
-  const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
-  const s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
-  return [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  ].map(encode) as [number, number, number];
-}
 
 const unitHex = (c: number[]) => toHex(c.map((v) => clamp01(v) * 255));
 
@@ -97,13 +62,25 @@ export function hexColor(hex: string): ThemeColor {
   return { r: r / 255, g: g / 255, b: b / 255, a: 1 };
 }
 
-export function mixOklab(a: ThemeColor, b: ThemeColor, t: number): [number, number, number] {
-  const [la, lb] = [oklab(a), oklab(b)];
-  return fromOklab(la.map((v, i) => v + (lb[i]! - v) * t) as Lab);
-}
-
 export function lookAngle(theme: Pick<ThemeLook, "angle">): number {
   return theme.angle ?? DEFAULT_THEME_ANGLE;
+}
+
+export function lookShape(theme: Pick<ThemeLook, "shape">): ThemeShape {
+  return theme.shape ?? DEFAULT_THEME_SHAPE;
+}
+
+export function lookGrainSize(theme: Pick<ThemeLook, "grainSize">): number {
+  return theme.grainSize ?? DEFAULT_GRAIN_SIZE;
+}
+
+export function lookGrainScale(theme: Pick<ThemeLook, "grainSize">): number {
+  const size = clamp01(lookGrainSize(theme));
+  return size <= 0.5 ? 0.5 * 2 ** (2 * size) : 3 ** (2 * size - 1);
+}
+
+export function usesLegacyGradient(theme: Pick<ThemeLook, "shape" | "stops">): boolean {
+  return lookShape(theme) === "linear" && theme.stops.length <= LEGACY_THEME_STOPS;
 }
 
 const direction = (degrees: number) => {
@@ -122,6 +99,13 @@ function along(degrees: number, x: number, y: number, width: number, height: num
 }
 
 export function themeArea(theme: ProfileTheme, x: number, y: number, width: number, height: number): [number, number, number] {
+  if (!usesLegacyGradient(theme)) {
+    const colors = theme.stops.slice(0, MAX_THEME_STOPS).map((s) => s.color);
+    const shape = lookShape(theme);
+    if (shape === "radial") return radialArea(colors, x, y, width, height);
+    if (shape === "mesh") return meshArea(colors, x, y, width, height);
+    return acrossStops(colors, along(lookAngle(theme), x, y, width, height, baseHalf) / BASE_REACH);
+  }
   const [c0, c1 = c0, c2] = theme.stops.map((s) => s.color) as [ThemeColor, ThemeColor?, ThemeColor?];
   const angle = lookAngle(theme);
   const t = clamp01(along(angle, x, y, width, height, baseHalf) / BASE_REACH);
@@ -183,7 +167,7 @@ export function themeUnderlayAlpha(theme: ProfileTheme, dark: boolean): number {
 }
 
 export function themeGrainAlpha(theme: ProfileTheme): number {
-  return clamp01(theme.grain) * TEXTURE_STRENGTH[theme.texture];
+  return grainStrength(theme.grain) * TEXTURE_STRENGTH[theme.texture];
 }
 
 export function flatColors(theme: ProfileTheme): number[] {
@@ -199,6 +183,8 @@ export function themeBackdrop(theme: ProfileTheme, dark: boolean): ThemeBackdrop
     themeTexture: theme.texture,
     themeAppearance: theme.mode,
     themeAngle: lookAngle(theme),
+    themeShape: lookShape(theme),
+    themeGrainScale: lookGrainScale(theme),
   };
 }
 
@@ -325,6 +311,8 @@ function sanitizeLook(v: unknown): ThemeLook | null {
     texture: THEME_TEXTURES.includes(t.texture as ThemeTexture) ? (t.texture as ThemeTexture) : "grain",
     translucency: clamp01(numberOr(t.translucency, 1)),
     ...(typeof t.angle === "number" && Number.isFinite(t.angle) ? { angle: ((t.angle % 360) + 360) % 360 } : {}),
+    ...(THEME_SHAPES.includes(t.shape as ThemeShape) ? { shape: t.shape as ThemeShape } : {}),
+    ...(typeof t.grainSize === "number" && Number.isFinite(t.grainSize) ? { grainSize: clamp01(t.grainSize) } : {}),
   };
 }
 

@@ -35,6 +35,8 @@ public final class EarlyBackdrop: NSObject {
     if let v = props["themeAppearance"] as? String { theme.appearance = v }
     if let v = props["themeTexture"] as? String { theme.texture = v }
     if let v = (props["themeAngle"] as? NSNumber)?.doubleValue { theme.angle = v }
+    if let v = props["themeShape"] as? String { theme.shape = v }
+    if let v = (props["themeGrainScale"] as? NSNumber)?.doubleValue { theme.grainScale = v }
     return theme.isEmpty ? nil : theme
   }
 }

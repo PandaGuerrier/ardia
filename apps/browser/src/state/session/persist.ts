@@ -9,7 +9,7 @@ import { restoreLaunchLook, saveLaunchLook } from "../windows/launchLook";
 import { parkWindowPins } from "../pins/parkedPins";
 import { closedWindowEntry, MAX_CLOSED_WINDOWS } from "../pins/closedTabs";
 import { isPeekTab } from "../peek/peek";
-import type { BrowserWindow, ParkedPins, SplitView, Tab } from "../browser/types";
+import type { BrowserWindow, ParkedPins, Profile, SplitView, Tab } from "../browser/types";
 import { downloadSession } from "../downloads/downloadsSlice";
 import { parseSaved, versionedJson, unchanged, type Migrations, type SavedObject } from "../../lib/savedDocument";
 import { sessionWithCleanUpMinutes } from "../settings/cleanUpAfter";
@@ -18,6 +18,7 @@ import { sessionWithOwnTabMutes } from "../tabs/mute";
 import { isRegularWindow } from "../windows/small";
 import { sessionWithPinChoiceStamps } from "../pins/pinChoices";
 import { isFields, isString, isStringList } from "../../lib/decode";
+import { sanitizeTheme } from "../../lib/profileLook";
 import { pageFromDisk, parkedSplitsChecked, pinFromDisk, savedPage, sessionWithSplitSlots, sessionWithTabPages, sessionWithTabPins, slotsFromDisk } from "./savedShapes";
 
 const SAVE_DELAY_MS = 800;
@@ -117,6 +118,13 @@ const snapshotOk = (o: unknown) => isFields(o) && has(o, ["url", "profileId"]);
 const closedTabOk = (o: SavedObject) => isString(o.id) && snapshotOk(o.tab);
 const tabListOk = (o: SavedObject) => isString(o.id) && Array.isArray(o.tabs) && o.tabs.every(snapshotOk);
 const profileOk = (o: SavedObject) => has(o, ["id", "name"]);
+const profileFromDisk = (profile: Profile): Profile => {
+  if (!profile.theme) return profile;
+  const theme = sanitizeTheme(profile.theme);
+  if (theme) return { ...profile, theme };
+  const { theme: _broken, ...rest } = profile;
+  return rest;
+};
 const parkedOk = (o: SavedObject) => Array.isArray(o.tabs) && o.tabs.every(snapshotOk) && Array.isArray(o.groups);
 
 type SavedSession = Omit<HydrateData, "history" | "bookmarks" | "downloads"> & {
@@ -128,7 +136,7 @@ export function parseSession(json: string | null | undefined): SavedSession | nu
   const raw = parseSaved(json, SESSION_VERSION, SESSION_MIGRATIONS);
   if (!raw) return null;
   return {
-    profiles: byProfile(raw.profiles, profileOk),
+    profiles: Object.fromEntries(Object.entries(byProfile<Profile>(raw.profiles, profileOk)).map(([id, p]) => [id, profileFromDisk(p)])),
     profileOrder: strings(raw.profileOrder),
     orphanedProfileData: strings(raw.orphanedProfileData),
     settings: isFields(raw.settings) ? (raw.settings as HydrateData["settings"]) : undefined,

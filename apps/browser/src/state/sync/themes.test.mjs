@@ -370,3 +370,57 @@ for (const [version, sharingDefault] of [["0.2.43", false], ["0.2.44", true]]) {
     assert.equal(await rounds([old, a], 4), 0, "nothing is republished once both have synced");
   });
 }
+
+function profileThemesAdapterBeforeShapes(links) {
+  const legacy = ({ shape: _shape, grainSize: _grainSize, angle: _angle, ...look }) => ({ ...look, stops: look.stops.slice(0, 3) });
+  const inner = profileThemesAdapterV0241(links);
+  return {
+    ...inner,
+    apply: (visible, changed) => {
+      for (const [id, { syncId }] of Object.entries(links())) {
+        const record = changed.has(`pth:${syncId}`) ? visible.get(`pth:${syncId}`) : null;
+        if (record?.preset) S().updateProfile(id, { theme: null });
+        else if (record?.t) S().updateProfile(id, { theme: { ...legacy(record.t), ...(record.t.dark ? { dark: legacy(record.t.dark) } : {}) } });
+      }
+    },
+  };
+}
+
+test("a theme's shape, grain size and fourth and fifth stops sync, and a Mac that drops them can't take them away", async () => {
+  const folder = new Folder();
+  const stop = (r, g, b, x, y) => ({ x, y, color: { r, g, b, a: 1 } });
+  const shaped = {
+    ...THEME,
+    stops: [...THEME.stops, stop(0.2, 0.4, 0.9, 0.5, 0.9), stop(0.9, 0.8, 0.1, 0.1, 0.5), stop(0.6, 0.2, 0.9, 0.9, 0.2)],
+    shape: "mesh",
+    grainSize: 0.9,
+  };
+  const first = new Mac("first", folder);
+  first.with(() => S().updateProfile("default", { theme: shaped }));
+  await first.sync();
+  assert.equal(first.scope.records["pth:s1"].v.t.stops.length, 3, "the pth: record keeps what an older Mac reads");
+  assert.equal(first.scope.records["pth:s1"].v.t.shape, undefined);
+  const second = new Mac("second", folder, { joining: true });
+  const old = new Mac("old", folder, { joining: true });
+  old.adapters = [adapters.profilesAdapter(LINKS), profileThemesAdapterBeforeShapes(LINKS)];
+  await rounds([first, second, old], 3);
+  assert.deepEqual(second.profile().theme, shaped, "a newer Mac takes the whole look");
+  assert.equal(old.profile().theme.stops.length, 3, "the older Mac keeps three stops");
+  assert.equal(await rounds([first, second, old], 4), 0, "and they settle");
+
+  old.with(() => S().updateProfile("default", { theme: { ...S().profiles.default.theme, intensity: 0.3 } }));
+  await rounds([old, first, second], 3);
+  for (const mac of [first, second]) {
+    assert.equal(mac.profile().theme.intensity, 0.3, `${mac.id} takes the older Mac's edit`);
+    assert.equal(mac.profile().theme.shape, "mesh", `${mac.id} keeps the shape`);
+    assert.equal(mac.profile().theme.grainSize, 0.9, `${mac.id} keeps the grain size`);
+    assert.equal(mac.profile().theme.stops.length, 5, `${mac.id} keeps all five stops`);
+  }
+  assert.equal(await rounds([first, second, old], 4), 0, "and they settle again");
+
+  second.with(() => S().updateProfile("default", { theme: null }));
+  await rounds([second, first], 2);
+  first.with(() => S().updateProfile("default", { theme: THEME }));
+  await rounds([first, second], 3);
+  assert.deepEqual(second.profile().theme, THEME, "a new plain theme doesn't inherit the old shape");
+});

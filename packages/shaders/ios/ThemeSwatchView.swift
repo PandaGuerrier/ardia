@@ -6,6 +6,8 @@ final class ThemeSwatchView: ExpoView {
   private let grain = GrainLayer()
   private let pad = CALayer()
   private var padLightness: Double = -1
+  private var colors: [SIMD4<Float>] = []
+  private var shape = ArcGradientLayer.linear
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
@@ -20,11 +22,22 @@ final class ThemeSwatchView: ExpoView {
   override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
   func setColors(_ flat: [Double]) {
-    themeLayer.setColors(ThemeGradient.parse(flat))
+    colors = ThemeGradient.parse(flat)
+    themeLayer.setColors(colors, shape: shape)
+  }
+
+  func setShape(_ value: String) {
+    guard value != shape else { return }
+    shape = value
+    themeLayer.setColors(colors, shape: shape)
   }
 
   func setGrain(_ value: Double) {
-    grain.opacity = Float(min(max(value, 0), 1))
+    grain.setStrength(CGFloat(value))
+  }
+
+  func setGrainScale(_ value: Double) {
+    grain.scale = CGFloat(value)
   }
 
   func setTexture(_ value: String) {

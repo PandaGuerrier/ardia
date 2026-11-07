@@ -5,30 +5,61 @@ final class GrainLayer: CALayer {
   static let arcDarkening: [String: (gain: Float, floor: Float)] = [
     "grain": (0.211, 0), "sand": (0.937, 0.132), "denim": (0.226, 0.068), "tweed": (0.23, 0.261),
   ]
+  static let boost: Float = 1.5
+  static let maxStrength: CGFloat = 1.5
+  static let scaleRange: ClosedRange<CGFloat> = 0.5...3
+  private static var tiles: [String: CGImage] = [:]
   private static var patterns: [String: CGColor] = [:]
 
-  var texture = "grain" { didSet { if texture != oldValue { backgroundColor = Self.pattern(texture) } } }
+  var texture = "grain" { didSet { if texture != oldValue { updatePattern() } } }
+  var scale: CGFloat = 1 { didSet { if scale != oldValue { updatePattern() } } }
+  private var boosted = false { didSet { if boosted != oldValue { updatePattern() } } }
 
   override init() {
     super.init()
     actions = ["bounds": NSNull(), "position": NSNull(), "opacity": NSNull(), "backgroundColor": NSNull()]
-    backgroundColor = Self.pattern(texture)
+    updatePattern()
+  }
+
+  func setStrength(_ strength: CGFloat) {
+    let s = min(max(strength, 0), Self.maxStrength)
+    boosted = s > 1
+    opacity = Float(boosted ? s / CGFloat(Self.boost) : s)
+  }
+
+  private func updatePattern() {
+    backgroundColor = Self.pattern(texture, scale: scale, boosted: boosted)
   }
 
   override init(layer: Any) { super.init(layer: layer) }
 
   required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-  static func pattern(_ texture: String) -> CGColor? {
-    if let cached = patterns[texture] { return cached }
-    guard let tile = tile(texture) else { return nil }
-    let image = NSImage(cgImage: tile, size: NSSize(width: side / 2, height: side / 2))
+  static func pattern(_ texture: String, scale: CGFloat = 1, boosted: Bool = false) -> CGColor? {
+    let key = "\(texture)|\(boosted)|\(Int((scale * 100).rounded()))"
+    if let cached = patterns[key] { return cached }
+    let tileKey = "\(texture)|\(boosted)"
+    guard let tile = tiles[tileKey] ?? tile(texture, gain: boosted ? boost : 1) else { return nil }
+    tiles[tileKey] = tile
+    let pixels = max(1, Int((CGFloat(side) * min(max(scale, scaleRange.lowerBound), scaleRange.upperBound)).rounded()))
+    guard let sized = pixels == side ? tile : resampled(tile, to: pixels) else { return nil }
+    let image = NSImage(cgImage: sized, size: NSSize(width: CGFloat(pixels) / 2, height: CGFloat(pixels) / 2))
     let color = NSColor(patternImage: image).cgColor
-    patterns[texture] = color
+    if patterns.count > 64 { patterns.removeAll() }
+    patterns[key] = color
     return color
   }
 
-  static func tile(_ texture: String) -> CGImage? {
+  static func resampled(_ tile: CGImage, to pixels: Int) -> CGImage? {
+    guard let context = CGContext(data: nil, width: pixels, height: pixels, bitsPerComponent: 8, bytesPerRow: pixels * 4,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+    context.interpolationQuality = .none
+    context.draw(tile, in: CGRect(x: 0, y: 0, width: pixels, height: pixels))
+    return context.makeImage()
+  }
+
+  static func tile(_ texture: String, gain: Float = 1) -> CGImage? {
     let n = side
     var alpha = [Float](repeating: 0, count: n * n)
     var state: UInt32 = 0x9E3779B9
@@ -74,7 +105,7 @@ final class GrainLayer: CALayer {
     }
     let match = arcDarkening[texture] ?? arcDarkening["grain"]!
     var bytes = [UInt8](repeating: 0, count: n * n * 4)
-    for i in 0..<(n * n) { bytes[i * 4 + 3] = UInt8(min(255, max(0, match.floor + match.gain * alpha[i]) * 255)) }
+    for i in 0..<(n * n) { bytes[i * 4 + 3] = UInt8(min(255, max(0, (match.floor + match.gain * alpha[i]) * gain) * 255)) }
     guard let provider = CGDataProvider(data: Data(bytes) as CFData) else { return nil }
     return CGImage(width: n, height: n, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: n * 4,
                    space: CGColorSpace(name: CGColorSpace.sRGB)!,

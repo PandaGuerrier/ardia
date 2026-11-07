@@ -1,6 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { StyleSheet, View, type GestureResponderEvent, type StyleProp, type ViewStyle } from "react-native";
-import { colorHex, flatColors, lookAngle, PAD_LIGHTNESS, padColor, stopLightness, themeGrainAlpha, themeLayerAlpha, themeUnderColor, withStopAt, withStopLightness, type ShownLook } from "../../lib/profileLook";
+import { colorHex, flatColors, lookAngle, lookGrainScale, lookShape, PAD_LIGHTNESS, padColor, stopLightness, themeGrainAlpha, themeLayerAlpha, themeUnderColor, withStopAt, withStopLightness, type ShownLook } from "../../lib/profileLook";
 import type { ProfileTheme } from "../../state/browser/types";
 import { Box, capsule, Dot, ink, ProgressTrack, radius, tabularNums, Text, ThemeSwatch, useTheme } from "../ui";
 import { MiniWindow } from "./MiniWindow";
@@ -67,8 +67,8 @@ export function DirectionDial({ angle, onChange }: { angle: number; onChange: (a
 export function ThemeBackdrop({ theme, dark, style, children }: { theme: ProfileTheme; dark: boolean; style?: StyleProp<ViewStyle>; children?: ReactNode }) {
   return (
     <View style={[style, { backgroundColor: themeUnderColor(theme, dark) }]}>
-      <ThemeSwatch colors={flatColors(theme)} angle={lookAngle(theme)} style={[StyleSheet.absoluteFill, { opacity: themeLayerAlpha(theme) }]} />
-      <ThemeSwatch colors={[]} grain={themeGrainAlpha(theme)} texture={theme.texture} style={StyleSheet.absoluteFill} />
+      <ThemeSwatch colors={flatColors(theme)} angle={lookAngle(theme)} shape={lookShape(theme)} style={[StyleSheet.absoluteFill, { opacity: themeLayerAlpha(theme) }]} />
+      <ThemeSwatch colors={[]} grain={themeGrainAlpha(theme)} grainScale={lookGrainScale(theme)} texture={theme.texture} style={StyleSheet.absoluteFill} />
       {children}
     </View>
   );

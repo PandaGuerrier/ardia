@@ -6,6 +6,7 @@ import type { CommandEvent } from "../../platform/commands";
 import { markdownLink } from "@ardia/core";
 import { useBrowser } from "../browser/store";
 import { requestCreateProfile } from "../profiles/createProfileRequest";
+import { openThemeEditor } from "../profiles/themeActions";
 import { activeTabId, bookmarkProfileId, isPinnedRow, resolveWindowId } from "../browser/model";
 import {
   closeGroup,
@@ -317,6 +318,10 @@ export function runCommand({ command, arg, windowId: requested }: CommandEvent, 
       return void requestAutofill(windowId, arg, tabId);
     case "newProfile":
       return void requestCreateProfile(windowId).then((id) => id && switchProfile(windowId, id));
+    case "editTheme": {
+      const profileId = s.windows[windowId]?.profileId;
+      return profileId ? openThemeEditor(windowId, profileId) : undefined;
+    }
   }
 }
 

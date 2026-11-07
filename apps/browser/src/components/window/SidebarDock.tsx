@@ -7,6 +7,7 @@ import { spring, curve } from "../ui/motion";
 import { Panel, reduceMotion, WindowDragRegion } from "../ui";
 import { useSidebarSide, useWindowId } from "../../state/browser/hooks";
 import { useSidebarDockState } from "../../state/windows/hooks";
+import { CardRadiusContext } from "./cardEdge";
 import { useToolbarLightsCenter } from "../../state/windows/layout";
 import { Sidebar } from "../sidebar/Sidebar";
 import { dismissHoverIn } from "../../state/sidebar/hover";
@@ -110,9 +111,18 @@ export function DockedLayout({
     () =>
       dock.interpolate({
         inputRange: [0, 1],
-        outputRange: [sideInset, dockedCardInset(width)],
+        outputRange: [topTabs ? sideInset : 0, dockedCardInset(width)],
+        extrapolateLeft: "clamp",
       }),
-    [dock, width, sideInset],
+    [dock, width, sideInset, topTabs],
+  );
+  const hiddenEdge = useMemo(() => {
+    const towards = (docked: number) => dock.interpolate({ inputRange: [0, 1], outputRange: [0, docked], extrapolateLeft: "clamp" });
+    return { top: towards(inset.top), right: towards(inset.right), bottom: towards(inset.bottom), left: towards(inset.left) };
+  }, [dock, inset.top, inset.right, inset.bottom, inset.left]);
+  const cardRadius = useMemo(
+    () => (topTabs ? layout.cardRadius : dock.interpolate({ inputRange: [0, 1], outputRange: [0, layout.cardRadius], extrapolate: "clamp" })),
+    [dock, topTabs],
   );
   const top = useMemo(() => dock.interpolate({ inputRange: [0, 1], outputRange: [layout.cardInset, inset.top] }), [dock, inset.top]);
   const stripY = useMemo(() => dock.interpolate({ inputRange: [0, 1], outputRange: [-inset.top, 0] }), [dock, inset.top]);
@@ -128,15 +138,15 @@ export function DockedLayout({
             : {
                 flex: 1,
                 flexDirection: "row",
-                paddingTop: topTabs ? top : inset.top,
-                paddingRight: !topTabs && right ? edge : inset.right,
-                paddingBottom: inset.bottom,
-                paddingLeft: !topTabs && !right ? edge : inset.left,
+                paddingTop: topTabs ? top : hiddenEdge.top,
+                paddingRight: topTabs ? inset.right : right ? edge : hiddenEdge.right,
+                paddingBottom: topTabs ? inset.bottom : hiddenEdge.bottom,
+                paddingLeft: topTabs ? inset.left : !right ? edge : hiddenEdge.left,
               }
         }
       >
         {!fullscreen && <WindowDragRegion style={StyleSheet.absoluteFill} />}
-        {children}
+        <CardRadiusContext.Provider value={cardRadius}>{children}</CardRadiusContext.Provider>
       </Animated.View>
       {topStrip &&
         stripShown && (

@@ -64,6 +64,7 @@ export type BrowserCommand =
   | "nextProfile"
   | "previousProfile"
   | "newProfile"
+  | "editTheme"
   | "openSettings"
   | "importBrowserData"
   | "showHistory"

@@ -67,6 +67,7 @@ enum CommandTable {
     case nextProfile
     case previousProfile
     case newProfile
+    case editTheme
     case openSettings
     case importBrowserData
     case showHistory
@@ -180,6 +181,7 @@ enum CommandTable {
     "nextProfile": "Next Profile",
     "previousProfile": "Previous Profile",
     "newProfile": "New Profile…",
+    "editTheme": "Edit Theme…",
     "openSettings": "Settings…",
     "importBrowserData": "Import from Another Browser…",
     "showHistory": "Show History…",

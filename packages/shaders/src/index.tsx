@@ -1,4 +1,4 @@
-import type { ThemeBackdropProps, ThemeTexture } from "@ardia/core";
+import type { ThemeBackdropProps, ThemeShape, ThemeTexture } from "@ardia/core";
 import { requireNativeModule, requireNativeViewManager } from "expo-modules-core";
 import type { ComponentType } from "react";
 import type { ViewProps } from "react-native";
@@ -65,6 +65,8 @@ export type ThemeSwatchProps = ViewProps & {
   texture?: ThemeTexture;
   padLightness?: number;
   angle?: number;
+  shape?: ThemeShape;
+  grainScale?: number;
 };
 
 const NativeThemeSwatch = requireNativeViewManager<ThemeSwatchProps>("ArdiaThemeSwatch");

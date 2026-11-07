@@ -1,5 +1,5 @@
 import { THEME_TEXTURES } from "@ardia/core";
-import { padPosition, sanitizeTheme } from "../../lib/profileLook";
+import { grainForStrength, padPosition, sanitizeTheme } from "../../lib/profileLook";
 import type { ProfileTheme, ThemeColor, ThemeLook, ThemeMode, ThemeTexture } from "../browser/types";
 
 type Json = Record<string, unknown>;
@@ -60,7 +60,7 @@ function parseLook(background: unknown): ParsedLook | null {
     look: {
       stops: colors.map((color) => ({ color, ...padPosition(color) })),
       intensity: num(modifiers?.intensityFactor) ?? 1,
-      grain: basic ? 0 : (num(modifiers?.noiseFactor) ?? 0),
+      grain: basic ? 0 : grainForStrength(num(modifiers?.noiseFactor) ?? 0),
       texture: THEME_TEXTURES.includes(modifiers?.overlay as ThemeTexture) ? (modifiers!.overlay as ThemeTexture) : "grain",
       translucency: basic ? 0 : 1,
     },
